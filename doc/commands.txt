@@ -1,0 +1,154 @@
+https://github.com/plataformatec/devise
+
+Firstly install devise:
+
+gem 'devise'
+gem "omniauth-facebook"
+
+
+rake db:create
+
+rails generate devise:install
+
+rails generate devise User
+class AddColumnsToUsers < ActiveRecord::Migration
+  def change	
+	  add_column :users, :first_name, :string
+	  add_column :users, :last_name, :string
+    add_column :users, :provider, :string
+    add_column :users, :uid, :string
+    add_column :users, :image, :string
+    add_column :users, :oauth_token, :string
+    add_column :users, :gender, :string
+    add_column :users, :oauth_expires_at, :datetime
+  end
+end
+
+
+
+
+
+rake db:migrate
+
+in devise.rb
+
+# facebook login
+require "omniauth-facebook"
+OpenSSL::SSL::VERIFY_PEER = OpenSSL::SSL::VERIFY_NONE if Rails.env.development? #On OS/X, for development only, it may be easiest just to disable certificate verification because the certificates are stored in the keychain, not the file system
+config.omniauth :facebook, "225432284290111", "2a57c68f50d473653c87a8132becf181"#, {:scope => 'read_stream,email', :client_options => { :ssl => { :ca_file => "/opt/local/share/curl/curl-ca-bundle.crt" }}}  # User Heroku CA
+
+
+
+http://stackoverflow.com/questions/11703679/opensslsslsslerror-on-heroku
+
+
+
+rails g controller miscellaneous sign_in home
+
+
+
+
+routes.rb
+
+#if the user login session active, dashboard should be the homepage
+root :to => 'miscellaneous#home', constraints: lambda { |r| r.env["warden"].authenticate? }
+#if the user not login, step_on page should be the homepage
+root :to => "miscellaneous#step_on"
+
+
+
+If you are using ONLY omniauth authentication, you need to define a route named new_user_session (if not defined, root will be used). Below is an example of such routes (you don't need to include it if you are also using database or other authentication with omniauth):
+
+devise_for :users, :controllers => { :omniauth_callbacks => "users/omniauth_callbacks" }
+
+devise_scope :user do
+  get 'sign_in', :to => 'devise/sessions#new', :as => :new_user_session
+  delete 'sign_out', :to => 'devise/sessions#destroy', :as => :destroy_user_session
+end
+
+
+
+
+
+Now we just add the file "app/controllers/users/omniauth_callbacks_controller.rb":
+
+class Users::OmniauthCallbacksController < Devise::OmniauthCallbacksController
+  def facebook
+    # You need to implement the method below in your model (e.g. app/models/user.rb)
+    @user = User.find_for_facebook_oauth(request.env["omniauth.auth"], current_user)
+
+    if @user.persisted?
+      sign_in_and_redirect @user, :event => :authentication #this will throw if @user is not activated
+      set_flash_message(:notice, :success, :kind => "Facebook") if is_navigational_format?
+    else
+      session["devise.facebook_data"] = request.env["omniauth.auth"]
+      redirect_to new_user_registration_url
+    end
+  end
+end
+
+
+
+
+
+
+user.rb
+
+
+attr_accessible :provider, :uid, :first_name, :last_name, :email, :image, :oauth_token, :gender, :oauth_expires_at # facebook
+
+
+
+  def self.find_for_facebook_oauth(auth, signed_in_resource=nil)
+    user = User.where(:provider => auth.provider, :uid => auth.uid).first
+    #category_id = UserCategory.find(:first, :conditions => ["name = ?", "Individual"])
+
+    #puts auth.inspect
+=begin
+#<OmniAuth::AuthHash credentials=#<Hashie::Mash expires=true expires_at=1349564408 token="AAADonWqD06YBAOp4sZAuPFWZBZAm1Oc9mYkWw8ovkSZCT3aBdBDvH6gPZAheZBQbFZCR8nR2Q432HZAbnZAGV86tV4mS1WWu6c6qHu11Mcw1nzwZDZD"> 
+extra=#<Hashie::Mash raw_info=#<Hashie::Mash education=[#<Hashie::Mash school=#<Hashie::Mash id="23680344606" name="Arizona State University"> type="College">, #<Hashie::Mash school=#<Hashie::Mash id="114923318519339" name="University of Science and Technology of China"> type="College">] email="tristan.liu@live.cn" first_name="Yangzi" gender="male" id="1602621290" last_name="Liu" link="http://www.facebook.com/yangzi.liu.9" locale="en_US" name="Yangzi Liu" timezone=-7 updated_time="2012-08-06T02:31:00+0000" username="yangzi.liu.9" verified=true work=[#<Hashie::Mash employer=#<Hashie::Mash id="23680344606" name="Arizona State University">>]>> 
+info=#<OmniAuth::AuthHash::InfoHash email="tristan.liu@live.cn" first_name="Yangzi" image="http://graph.facebook.com/1602621290/picture?type=square" last_name="Liu" name="Yangzi Liu" nickname="yangzi.liu.9" urls=#<Hashie::Mash Facebook="http://www.facebook.com/yangzi.liu.9"> verified=true> provider="facebook" uid="1602621290"
+=end
+    unless user
+      user = User.create(
+      #name:auth.extra.raw_info.name,
+      first_name:auth.extra.raw_info.first_name,
+      last_name:auth.extra.raw_info.last_name,
+      #category_id:category_id,
+      provider:auth.provider,
+      uid:auth.uid,
+      email:auth.uid + auth.info.email,
+      image:auth.info.image.sub!("type=square", "width=200&height=200"), #get a larger profile picture for profile page, turns out not square
+      oauth_token:auth.credentials.token,
+      gender:auth.extra.raw_info.gender,
+      #refresh_token:auth.credentials.refresh_token
+      oauth_expires_at:Time.at(auth.credentials.expires_at) )
+    else
+      #the token expires in 90 days, won't be updated during every login
+      user.oauth_token = auth.credentials.token
+      user.oauth_expires_at = Time.at(auth.credentials.expires_at)
+      user.image = auth.info.image.sub!("type=square", "width=200&height=200") #incase the user edited profile
+      user.save
+    end
+    user
+  end
+def self.new_with_session(params, session)
+super.tap do |user|
+  if data = session["devise.facebook_data"] && session["devise.facebook_data"]["extra"]["raw_info"]
+    user.email = data["email"] if user.email.blank?
+  end
+end
+end
+
+
+
+
+heroku create (http://frozen-chamber-6737.herokuapp.com/ | git@heroku.com:frozen-chamber-6737.git)
+git remote add heroku git@heroku.com:git@heroku.com:frozen-chamber-6737.git
+Type this and I think you'll see the problem:
+
+git remote -v
+Fix it like this:
+
+git remote rm heroku
+git remote add heroku git@heroku.com:electric-meadow-15.git
