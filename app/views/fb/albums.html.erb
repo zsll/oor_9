@@ -1,0 +1,13 @@
+<h1>
+	<%= image_tag(@user.picture) %>
+	<%= link_to fb_albums_path(:user_id => @user.raw_attributes['id']) do %>
+		<%=@user.raw_attributes['name']%>
+	<% end %>
+	's facebook albums:
+</h1>
+<% @albums.each do |a| %>
+	<%= link_to fb_photos_path(:album_id => a.raw_attributes['id']) do %>
+		<%=a.raw_attributes['name']%>
+	<% end %>
+	<br>
+<% end %>
