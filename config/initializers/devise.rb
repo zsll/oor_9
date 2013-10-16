@@ -25,7 +25,7 @@ Devise.setup do |config|
   require "omniauth-facebook"
   OpenSSL::SSL::VERIFY_PEER = OpenSSL::SSL::VERIFY_NONE if Rails.env.development? #On OS/X, for development only, it may be easiest just to disable certificate verification because the certificates are stored in the keychain, not the file system
   #config.omniauth :facebook, "225432284290111", "2a57c68f50d473653c87a8132becf181"#, {:scope => 'email', :client_options => { :ssl => { :ca_file => "/opt/local/share/curl/curl-ca-bundle.crt" }}}  # User Heroku CA
-  config.omniauth :facebook, "225432284290111", "2a57c68f50d473653c87a8132becf181", {:scope => 'email,friends_photos,user_photos'}  #permissions friends_photos to get friends photos
+  config.omniauth :facebook, "225432284290111", "2a57c68f50d473653c87a8132becf181", {:scope => 'email,friends_photos,user_photos', :client_options => { :ssl => { :ca_file => "/opt/local/share/curl/curl-ca-bundle.crt" }}}  #permissions friends_photos to get friends photos
 
   # ==> Configuration for any authentication mechanism
   # Configure which keys are used when authenticating a user. The default is
