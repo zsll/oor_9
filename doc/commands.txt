@@ -142,6 +142,7 @@ end
 
 
 
+<<<<<<< HEAD
 gem 'fb_graph'
 u = User.first
 me = FbGraph::User.me(u.oauth_token)
@@ -202,3 +203,15 @@ photos = album.photos
 
 1602621290
 array = FbGraph::Query.new("SELECT name FROM user WHERE id = 100002795328052").fetch(u.oauth_token)
+=======
+
+heroku create (http://frozen-chamber-6737.herokuapp.com/ | git@heroku.com:frozen-chamber-6737.git)
+git remote add heroku git@heroku.com:git@heroku.com:frozen-chamber-6737.git
+Type this and I think you'll see the problem:
+
+git remote -v
+Fix it like this:
+
+git remote rm heroku
+git remote add heroku git@heroku.com:electric-meadow-15.git
+>>>>>>> d02371c0be6f75c6637e9161e07c24a3b190acbf
