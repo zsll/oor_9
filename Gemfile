@@ -10,7 +10,7 @@ gem "omniauth-facebook"
 gem 'fb_graph'
 #gem "koala", "~> 1.7.0rc1"
 gem 'pg'
-
+gem 'figaro'
 
 #This section would be needed for Heroku or bundle install won't pass
 group :production do
